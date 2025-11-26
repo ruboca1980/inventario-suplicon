@@ -21,7 +21,7 @@ function App() {
         >
           <AppRouter />
         </SnackbarProvider>
-        {/* -------------------------------- */}
+        {/* --------------------------------- */}
       </AuthProvider>
     </CustomThemeProvider>
   );
