@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Typography, Paper, Grid, TextField, FormControl, InputLabel, Select, MenuItem, List, ListItemButton, ListItemText, IconButton } from '@mui/material';
+import {
+  Box, Button, Typography, Paper, Grid, TextField, FormControl, InputLabel, Select, MenuItem, List, ListItemButton, ListItemText, IconButton,
+  Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText
+} from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import { esES } from '@mui/x-data-grid/locales';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -34,6 +37,11 @@ const ExitPage = () => {
   const [isSerialSelectorOpen, setIsSerialSelectorOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [isExitSaved, setIsExitSaved] = useState(false);
+
+  // --- NUEVOS ESTADOS PARA EL FLUJO DE NOTA DE ENTREGA ---
+  const [showDeliveryNotePrompt, setShowDeliveryNotePrompt] = useState(false);
+  const [createdExitId, setCreatedExitId] = useState(null);
 
   useEffect(() => {
     const unsubProducts = getProductsRealTime(setProducts);
@@ -146,6 +154,8 @@ const ExitPage = () => {
         date: formattedDate,
         items: exitItems,
       });
+      setIsExitSaved(false); // Resetear estado
+      setCreatedExitId(null); // Resetear ID
       setIsPreviewOpen(true);
     } catch (error) {
       enqueueSnackbar("No se pudo pre-cargar el número correlativo.", { variant: 'error' });
@@ -166,14 +176,27 @@ const ExitPage = () => {
       })),
     };
     try {
-      await createInventoryExit(exitData);
-      setIsPreviewOpen(false);
+      // --- CAPTURAMOS EL ID RETORNADO ---
+      const newId = await createInventoryExit(exitData);
+      setCreatedExitId(newId);
+
+      setIsExitSaved(true); // Marcamos como guardado
       // ÉXITO FINAL
-      enqueueSnackbar("¡Salida registrada con éxito!", { variant: 'success' });
-      navigate('/dashboard');
+      enqueueSnackbar("¡Salida registrada con éxito! Ahora puede imprimir o exportar.", { variant: 'success' });
+      // navigate('/dashboard'); // Se mueve al cierre del modal
     } catch (error) {
       console.error(error);
       enqueueSnackbar("Error al registrar la salida. " + error.message, { variant: 'error' });
+    }
+  };
+
+  const handlePromptClose = (shouldGenerate) => {
+    setShowDeliveryNotePrompt(false);
+    if (shouldGenerate && createdExitId) {
+      // Redirigir a Nota de Entrega con el ID preseleccionado
+      navigate('/delivery-note', { state: { preSelectedExitId: createdExitId } });
+    } else {
+      navigate('/dashboard');
     }
   };
 
@@ -265,12 +288,39 @@ const ExitPage = () => {
       />
       <ExitPreviewModal
         open={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
+        onClose={() => {
+          setIsPreviewOpen(false);
+          // Si está guardado, mostramos el prompt en lugar de navegar directamente
+          if (isExitSaved) {
+            setShowDeliveryNotePrompt(true);
+          }
+        }}
         onConfirm={handleSubmitExit}
         exitData={previewData}
+        isSaved={isExitSaved}
       />
+
+      {/* --- DIÁLOGO DE CONFIRMACIÓN PARA NOTA DE ENTREGA --- */}
+      <Dialog
+        open={showDeliveryNotePrompt}
+        onClose={() => handlePromptClose(false)} // Si cierra por fuera, asumimos "No"
+      >
+        <DialogTitle>Generar Nota de Entrega</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Desea generar una Nota de Entrega para esta salida ahora mismo?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handlePromptClose(false)} color="primary">
+            No, ir al Dashboard
+          </Button>
+          <Button onClick={() => handlePromptClose(true)} color="primary" variant="contained" autoFocus>
+            Sí, generar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
-
 export default ExitPage;

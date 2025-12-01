@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Paper, Button, Grid, Autocomplete, TextField } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-import { getCompletedExits, saveDeliveryNote } from '../firebase/deliveryNoteServices';
+import { getCompletedExits, saveDeliveryNote, getAllDeliveryNotes } from '../firebase/deliveryNoteServices';
 import { getNextCorrelative } from '../firebase/transactionServices';
 import { getCustomersRealTime } from '../firebase/customerServices';
 import { getStaffRealTime } from '../firebase/staffServices';
@@ -13,14 +13,13 @@ import DeliveryNoteLogistics from '../components/DeliveryNoteLogistics.jsx';
 import DeliveryNoteItemsTable from '../components/DeliveryNoteItemsTable.jsx';
 import DeliveryNotePreviewModal from '../components/DeliveryNotePreviewModal.jsx';
 
-// 1. IMPORTAR NOTISTACK
 import { useSnackbar } from 'notistack';
 
 const DeliveryNotePage = () => {
-  // 2. INICIALIZAR
   const { enqueueSnackbar } = useSnackbar();
-
+  const location = useLocation();
   const navigate = useNavigate();
+
   const [exits, setExits] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -39,9 +38,9 @@ const DeliveryNotePage = () => {
     chutoMarca: '', chutoModelo: '', chutoColor: '', chutoPlaca: '',
     bateaMarca: '', bateaColor: '', bateaPlaca: '',
     lugarDespacho: 'Galpón El Tigre',
-    fechaDespacho: new Date().toISOString().split('T')[0],
+    fechaDespacho: '',
     lugarRecepcion: 'Almacén Principal Petrolera Roraima, San Diego de Cabrutica',
-    fechaRecepcion: new Date().toISOString().split('T')[0],
+    fechaRecepcion: '',
   };
   const [logisticsData, setLogisticsData] = useState(initialLogisticsState);
 
@@ -50,16 +49,23 @@ const DeliveryNotePage = () => {
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [isNoteSaved, setIsNoteSaved] = useState(false);
 
   useEffect(() => {
     const fetchExits = async () => {
       setLoadingExits(true);
       try {
-        const exitList = await getCompletedExits();
-        setExits(exitList);
+        const [exitList, deliveryNotes] = await Promise.all([
+          getCompletedExits(),
+          getAllDeliveryNotes()
+        ]);
+
+        const processedExitIds = new Set(deliveryNotes.map(note => note.originalExitId));
+        const availableExits = exitList.filter(exit => !processedExitIds.has(exit.id));
+
+        setExits(availableExits);
       } catch (error) {
         console.error("Error cargando salidas:", error);
-        // 3. ERROR DE CARGA
         enqueueSnackbar("Error al cargar las salidas.", { variant: 'error' });
       }
       setLoadingExits(false);
@@ -120,8 +126,7 @@ const DeliveryNotePage = () => {
         enqueueSnackbar("Error al cargar los detalles de la salida.", { variant: 'error' });
         setItemsData([]);
       }
-      
-      // Resetear logística
+
       setLogisticsData(initialLogisticsState);
 
     } else {
@@ -133,8 +138,18 @@ const DeliveryNotePage = () => {
     }
   };
 
+  useEffect(() => {
+    if (location.state?.preSelectedExitId && exits.length > 0 && !selectedExit) {
+      const exitToSelect = exitOptions.find(e => e.id === location.state.preSelectedExitId);
+      if (exitToSelect) {
+        handleExitSelect(null, exitToSelect);
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [exits, location.state, customers]);
+
+
   const handleOpenPreview = async () => {
-    // 3. VALIDACIÓN SUAVE (Sugerencia)
     if (!logisticsData.conductorName || !logisticsData.conductorId) {
       enqueueSnackbar('Sugerencia: No olvides llenar los datos del conductor.', { variant: 'info', autoHideDuration: 4000 });
     }
@@ -152,6 +167,7 @@ const DeliveryNotePage = () => {
       };
       setPreviewData(allNoteData);
       setIsPreviewOpen(true);
+      setIsNoteSaved(false); // Resetear estado al abrir preview
     } catch (error) {
       console.error("Error al generar el correlativo:", error);
       enqueueSnackbar("Error al generar el correlativo.", { variant: 'error' });
@@ -165,17 +181,21 @@ const DeliveryNotePage = () => {
     }
     try {
       await saveDeliveryNote(previewData);
-      // 3. ÉXITO FINAL
       enqueueSnackbar(`¡Nota de Entrega ${previewData.correlative} guardada con éxito!`, { variant: 'success' });
-      setIsPreviewOpen(false);
-      setPreviewData(null);
-      navigate('/dashboard');
+      setIsNoteSaved(true); // Marcamos como guardado
+      // No navegamos, dejamos el modal abierto
     } catch (error) {
       console.error("Error al guardar:", error);
-      // 3. ERROR
       enqueueSnackbar("Error al guardar la Nota de Entrega. Revisa la consola.", { variant: 'error' });
       throw error;
     }
+  };
+
+  const handleFinalize = () => {
+    setIsPreviewOpen(false);
+    setPreviewData(null);
+    setIsNoteSaved(false);
+    navigate('/dashboard');
   };
 
   const handleLogisticsDatePlaceChange = (e) => {
@@ -230,7 +250,7 @@ const DeliveryNotePage = () => {
                 setLogisticsData={setLogisticsData}
               />
             </Paper>
-            
+
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="h6" gutterBottom>5. Datos de Despacho y Recepción (Editable)</Typography>
               <Grid container spacing={2}>
@@ -298,9 +318,17 @@ const DeliveryNotePage = () => {
       {isPreviewOpen && (
         <DeliveryNotePreviewModal
           open={isPreviewOpen}
-          onClose={() => setIsPreviewOpen(false)}
+          onClose={() => {
+            if (isNoteSaved) {
+              handleFinalize();
+            } else {
+              setIsPreviewOpen(false);
+            }
+          }}
           onConfirm={handleConfirmSave}
+          onFinalize={handleFinalize}
           neData={previewData}
+          isSaved={isNoteSaved}
         />
       )}
     </>

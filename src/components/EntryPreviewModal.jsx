@@ -7,7 +7,7 @@ import EntryDocument from './EntryDocument.jsx'; // Importa el componente del do
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-const EntryPreviewModal = ({ open, onClose, onConfirm, entryData }) => {
+const EntryPreviewModal = ({ open, onClose, onConfirm, entryData, isSaved }) => {
     const documentRef = useRef(); // Referencia al componente EntryDocument
     const [isSaving, setIsSaving] = useState(false); // Estado para deshabilitar botones al guardar
 
@@ -57,14 +57,14 @@ const EntryPreviewModal = ({ open, onClose, onConfirm, entryData }) => {
                 pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdf);
                 heightLeft -= pageHeight;
             }
-            
+
             // Guarda el PDF con un nombre descriptivo
             pdf.save(`Entrada-${entryData.correlative || 'preview'}_${new Date().toLocaleDateString('es-VE')}.pdf`);
         }).catch(err => {
-             // Restaurar scroll si hay error
-             scrollContainer.style.overflow = originalOverflow;
-             console.error("Error al generar PDF con html2canvas:", err);
-             alert("Error al generar PDF. Ver consola.");
+            // Restaurar scroll si hay error
+            scrollContainer.style.overflow = originalOverflow;
+            console.error("Error al generar PDF con html2canvas:", err);
+            alert("Error al generar PDF. Ver consola.");
         });
     };
 
@@ -73,14 +73,13 @@ const EntryPreviewModal = ({ open, onClose, onConfirm, entryData }) => {
         setIsSaving(true); // Deshabilita los botones
         try {
             await onConfirm(); // Llama a la función handleSubmitEntry de EntryPage
-            // Si onConfirm se resuelve sin error, la redirección ocurrirá en EntryPage
+            setIsSaving(false); // Habilita los botones nuevamente tras guardar
         } catch (error) {
             console.error("Fallo al guardar la entrada:", error);
             // Si hay un error al guardar, volvemos a habilitar los botones
             setIsSaving(false);
             // La alerta de error ya se muestra en handleSubmitEntry
         }
-        // No ponemos setIsSaving(false) aquí si todo va bien, porque la página redirige
     };
 
     return (
@@ -96,23 +95,30 @@ const EntryPreviewModal = ({ open, onClose, onConfirm, entryData }) => {
                     <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
                         Vista Previa de Entrada
                     </Typography>
-                    {/* Botón para imprimir */}
-                    <Button color="inherit" startIcon={<PrintIcon />} onClick={handlePrint} disabled={isSaving}>
-                        Imprimir
-                    </Button>
-                    {/* Botón para exportar a PDF */}
-                    <Button color="inherit" startIcon={<PictureAsPdfIcon />} onClick={handleExportPDF} disabled={isSaving}>
-                        Exportar a PDF
-                    </Button>
-                    {/* Botón para confirmar y guardar */}
-                    <Button
-                        color="inherit"
-                        onClick={handleConfirmClick}
-                        variant="outlined"
-                        disabled={isSaving} // Deshabilitado mientras guarda
-                    >
-                        {isSaving ? 'Guardando...' : 'Confirmar y Guardar'}
-                    </Button>
+
+                    {/* Botones de Imprimir y Exportar: SOLO VISIBLES SI ESTÁ GUARDADO */}
+                    {isSaved && (
+                        <>
+                            <Button color="inherit" startIcon={<PrintIcon />} onClick={handlePrint} disabled={isSaving}>
+                                Imprimir
+                            </Button>
+                            <Button color="inherit" startIcon={<PictureAsPdfIcon />} onClick={handleExportPDF} disabled={isSaving}>
+                                Exportar a PDF
+                            </Button>
+                        </>
+                    )}
+
+                    {/* Botón para confirmar y guardar: SOLO VISIBLE SI NO ESTÁ GUARDADO */}
+                    {!isSaved && (
+                        <Button
+                            color="inherit"
+                            onClick={handleConfirmClick}
+                            variant="outlined"
+                            disabled={isSaving} // Deshabilitado mientras guarda
+                        >
+                            {isSaving ? 'Guardando...' : 'Confirmar y Guardar'}
+                        </Button>
+                    )}
                 </Toolbar>
             </AppBar>
 
@@ -157,13 +163,13 @@ const EntryPreviewModal = ({ open, onClose, onConfirm, entryData }) => {
             {/* --- CONTENEDOR GRIS CON SCROLL --- */}
             {/* Controla scroll vertical/horizontal en PANTALLA */}
             <Box className="print-background-container" sx={{
-                 p: 3, // Padding alrededor del documento blanco en pantalla
-                 backgroundColor: '#e0e0e0', // Fondo gris
-                 minHeight: 'calc(100vh - 80px)', // Altura ajustada (viewport menos AppBar)
-                 overflow: 'auto', // Scroll automático
-                 display: 'flex', // Necesario para centrar
-                 justifyContent: 'center', // Centra horizontalmente
-                 alignItems: 'flex-start' // Alinea el documento arriba si hay scroll vertical
+                p: 3, // Padding alrededor del documento blanco en pantalla
+                backgroundColor: '#e0e0e0', // Fondo gris
+                minHeight: 'calc(100vh - 80px)', // Altura ajustada (viewport menos AppBar)
+                overflow: 'auto', // Scroll automático
+                display: 'flex', // Necesario para centrar
+                justifyContent: 'center', // Centra horizontalmente
+                alignItems: 'flex-start' // Alinea el documento arriba si hay scroll vertical
             }}>
                 {/* Div imprimible (con ID único) */}
                 <div id="document-to-print-entry">

@@ -7,12 +7,18 @@ import logo from '../assets/logo_nuevo-removebg-preview.png';
 
 /**
  * Plantilla visual para la Nota de Entrega (NE).
- * (ACTUALIZADA: Corregido error de tipeo 'logDisticsData')
+ * (ACTUALIZADA: Layout de Cliente (fuente pequeña), Logística (fuente pequeña), Firmas mejorados y Cantidad centrada)
  */
-const DeliveryNoteDocument = React.forwardRef(({ neData }, ref) => {
+const DeliveryNoteDocument = React.forwardRef(({ neData, copyLabel, isForPrint = false }, ref) => {
   if (!neData) return null;
 
-  const { correlative, customerData, logisticsData, itemsData, issuerData } = neData;
+  const {
+    correlative,
+    customerData = {},
+    logisticsData = {},
+    itemsData = [],
+    issuerData = {}
+  } = neData;
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -24,18 +30,19 @@ const DeliveryNoteDocument = React.forwardRef(({ neData }, ref) => {
     <Paper
       ref={ref}
       sx={{
-        maxWidth: '800px', width: '100%', minHeight: '950px',
+        maxWidth: isForPrint ? 'none' : '800px', // Disable maxWidth for print
+        width: '100%',
+        minHeight: '950px',
         p: 3,
         backgroundColor: '#fff', color: '#000',
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
-        // position: 'relative', // ELIMINADO
       }}
     >
       {/* Contenido Superior (para el flexGrow) */}
       <Box sx={{ flexGrow: 1 }}>
-        
+
         {/* --- ENCABEZADO (CON <table> PARA IMPRESIÓN) --- */}
         <Box sx={{ mb: 1.5, width: '100%' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -75,17 +82,40 @@ const DeliveryNoteDocument = React.forwardRef(({ neData }, ref) => {
         </Box>
         <Divider sx={{ mb: 2 }} />
 
-        {/* --- SECCIÓN 1: DATOS DEL CLIENTE --- */}
-        <Box sx={{ border: '1px solid #ccc', p: 1.5, mb: 2 }}>
-          <Grid container spacing={1} sx={{ fontSize: '0.8rem' }}>
-            <Grid item xs={12} sm={7}><Typography variant="body2"><strong>Nombre ó Razón Social:</strong> {customerData.name}</Typography></Grid>
-            <Grid item xs={12} sm={5}><Typography variant="body2"><strong>RIF:</strong> {customerData.rif}</Typography></Grid>
-            <Grid item xs={12}><Typography variant="body2"><strong>Dirección Fiscal:</strong> {customerData.address}</Typography></Grid>
-            <Grid item xs={12} sm={7}><Typography variant="body2"><strong>Persona Contacto:</strong> {customerData.contactName || 'N/A'}</Typography></Grid>
-            <Grid item xs={12} sm={5}><Typography variant="body2"><strong>Teléfono:</strong> {customerData.phone || 'N/A'}</Typography></Grid>
-            <Grid item xs={12} sm={7}><Typography variant="body2"><strong>Correo:</strong> {customerData.contactEmail || 'N/A'}</Typography></Grid>
-            <Grid item xs={12} sm={5}><Typography variant="body2"><strong>N° de Orden/Pedido:</strong> {customerData.orderNumber || 'N/A'}</Typography></Grid>
-          </Grid>
+        {/* --- SECCIÓN 1: DATOS DEL CLIENTE (LAYOUT MEJORADO, FUENTE PEQUEÑA) --- */}
+        <Box sx={{ border: '1px solid #ccc', p: 1.5, mb: 2, fontSize: '0.75rem' }}>
+          {/* Linea 1: Nombre y RIF */}
+          <Box sx={{ display: 'flex', mb: 0.5 }}>
+            <Box sx={{ flex: 2, pr: 1 }}>
+              <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Nombre ó Razón Social:</strong> {customerData.name}</Typography>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>RIF:</strong> {customerData.rif}</Typography>
+            </Box>
+          </Box>
+
+          {/* Linea 2: Dirección */}
+          <Box sx={{ mb: 0.5 }}>
+            <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Dirección Fiscal:</strong> {customerData.address}</Typography>
+          </Box>
+
+          {/* Linea 3: Contacto, Teléfono, Correo */}
+          <Box sx={{ display: 'flex', mb: 0.5 }}>
+            <Box sx={{ flex: 1, pr: 1 }}>
+              <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Persona Contacto:</strong> {customerData.contactName || 'N/A'}</Typography>
+            </Box>
+            <Box sx={{ flex: 1, pr: 1 }}>
+              <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Teléfono:</strong> {customerData.phone || 'N/A'}</Typography>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Correo:</strong> {customerData.contactEmail || 'N/A'}</Typography>
+            </Box>
+          </Box>
+
+          {/* Linea 4: Orden de Compra */}
+          <Box>
+            <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>N° de Orden/Pedido:</strong> {customerData.orderNumber || 'N/A'}</Typography>
+          </Box>
         </Box>
 
         {/* --- SECCIÓN 2: TABLA DE PRODUCTOS --- */}
@@ -94,7 +124,7 @@ const DeliveryNoteDocument = React.forwardRef(({ neData }, ref) => {
             <Table size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '15%', fontWeight: 'bold', fontSize: '0.8rem', p: 0.5 }} align="right">Cantidad</TableCell>
+                  <TableCell sx={{ width: '15%', fontWeight: 'bold', fontSize: '0.8rem', p: 0.5 }} align="center">Cantidad</TableCell>
                   <TableCell sx={{ width: '35%', fontWeight: 'bold', fontSize: '0.8rem', p: 0.5 }}>Descripción</TableCell>
                   <TableCell sx={{ width: '20%', fontWeight: 'bold', fontSize: '0.8rem', p: 0.5 }}>Marca</TableCell>
                   <TableCell sx={{ width: '30%', fontWeight: 'bold', fontSize: '0.8rem', p: 0.5 }}>Seriales</TableCell>
@@ -103,7 +133,7 @@ const DeliveryNoteDocument = React.forwardRef(({ neData }, ref) => {
               <TableBody>
                 {itemsData.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell align="right" sx={{ fontSize: '0.8rem', verticalAlign: 'top', p: 0.5, wordBreak: 'break-word' }}>{item.quantity}</TableCell>
+                    <TableCell align="center" sx={{ fontSize: '0.8rem', verticalAlign: 'top', p: 0.5, wordBreak: 'break-word' }}>{item.quantity}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', verticalAlign: 'top', p: 0.5, wordBreak: 'break-word' }}>{item.description}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', verticalAlign: 'top', p: 0.5, wordBreak: 'break-word' }}>{item.brand}</TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', verticalAlign: 'top', p: 0.5, wordBreak: 'break-word' }}>{Array.isArray(item.serials) ? item.serials.join(', ') : ''}</TableCell>
@@ -120,36 +150,69 @@ const DeliveryNoteDocument = React.forwardRef(({ neData }, ref) => {
       <Box
         component="footer"
         sx={{
-          pt: 1, 
+          pt: 1,
           breakInside: 'avoid',
           pageBreakInside: 'avoid',
         }}
       >
-        {/* --- SECCIÓN 3: DATOS DE LOGÍSTICA --- */}
+        {/* --- SECCIÓN 3: DATOS DE LOGÍSTICA (LAYOUT MEJORADO, FUENTE PEQUEÑA) --- */}
         <Box sx={{ border: '1px solid #ccc', p: 1.5, mb: 1.5 }}>
           <Typography variant="body1" gutterBottom sx={{ fontWeight: 'bold' }}>
             Información Logística de Entrega
           </Typography>
-          <Grid container spacing={0.5} sx={{ fontSize: '0.75rem' }}>
-            <Grid item xs={8}><Typography variant="caption"><strong>Conductor:</strong> {logisticsData.conductorName}</Typography></Grid>
-            <Grid item xs={4}><Typography variant="caption"><strong>C.I:</strong> {logisticsData.conductorId}</Typography></Grid>
-            {/* --- ¡AQUÍ ESTABA EL ERROR! --- */}
-            {/* Corregido de logDisticsData a logisticsData */}
-            <Grid item xs={8}><Typography variant="caption"><strong>Ayudante:</strong> {logisticsData.ayudanteName || 'N/A'}</Typography></Grid>
-            <Grid item xs={4}><Typography variant="caption"><strong>C.I:</strong> {logisticsData.ayudanteId || 'N/A'}</Typography></Grid>
-          </Grid>
-          <Divider sx={{ my: 0.5 }} />
-          <Grid container spacing={0.5} sx={{ fontSize: '0.75rem' }}>
-            <Grid item xs={3}><Typography variant="caption"><strong>Chuto:</strong> {logisticsData.chutoMarca}</Typography></Grid>
-            <Grid item xs={3}><Typography variant="caption"><strong>Modelo:</strong> {logisticsData.chutoModelo}</Typography></Grid>
-            <Grid item xs={3}><Typography variant="caption"><strong>Color:</strong> {logisticsData.chutoColor}</Typography></Grid>
-            <Grid item xs={3}><Typography variant="caption"><strong>Placa:</strong> {logisticsData.chutoPlaca}</Typography></Grid>
-          </Grid>
-          <Grid container spacing={0.5} sx={{ fontSize: '0.75rem' }}>
-            <Grid item xs={4}><Typography variant="caption"><strong>Batea (Marca):</strong> {logisticsData.bateaMarca}</Typography></Grid>
-            <Grid item xs={4}><Typography variant="caption"><strong>Batea (Color):</strong> {logisticsData.bateaColor}</Typography></Grid>
-            <Grid item xs={4}><Typography variant="caption"><strong>Batea (Placa):</strong> {logisticsData.bateaPlaca}</Typography></Grid>
-          </Grid>
+
+          <Box sx={{ fontSize: '0.7rem' }}>
+            {/* Fila 1: Conductor */}
+            <Box sx={{ display: 'flex', mb: 0.5 }}>
+              <Box sx={{ flex: 2, pr: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Conductor:</strong> {logisticsData.conductorName}</Typography>
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>C.I:</strong> {logisticsData.conductorId}</Typography>
+              </Box>
+            </Box>
+
+            {/* Fila 2: Ayudante */}
+            <Box sx={{ display: 'flex', mb: 0.5 }}>
+              <Box sx={{ flex: 2, pr: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Ayudante:</strong> {logisticsData.ayudanteName || 'N/A'}</Typography>
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>C.I:</strong> {logisticsData.ayudanteId || 'N/A'}</Typography>
+              </Box>
+            </Box>
+
+            <Divider sx={{ my: 0.5 }} />
+
+            {/* Fila 3: Chuto */}
+            <Box sx={{ display: 'flex', mb: 0.5 }}>
+              <Box sx={{ flex: 1, pr: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Chuto:</strong> {logisticsData.chutoMarca}</Typography>
+              </Box>
+              <Box sx={{ flex: 1, pr: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Modelo:</strong> {logisticsData.chutoModelo}</Typography>
+              </Box>
+              <Box sx={{ flex: 1, pr: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Color:</strong> {logisticsData.chutoColor}</Typography>
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Placa:</strong> {logisticsData.chutoPlaca}</Typography>
+              </Box>
+            </Box>
+
+            {/* Fila 4: Batea */}
+            <Box sx={{ display: 'flex' }}>
+              <Box sx={{ flex: 1, pr: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Batea (Marca):</strong> {logisticsData.bateaMarca}</Typography>
+              </Box>
+              <Box sx={{ flex: 1, pr: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Batea (Color):</strong> {logisticsData.bateaColor}</Typography>
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" sx={{ fontSize: 'inherit' }}><strong>Batea (Placa):</strong> {logisticsData.bateaPlaca}</Typography>
+              </Box>
+            </Box>
+          </Box>
         </Box>
         {/* --- FIN DE LOGÍSTICA --- */}
 
@@ -162,30 +225,39 @@ const DeliveryNoteDocument = React.forwardRef(({ neData }, ref) => {
               <Typography variant="caption" display="block" sx={{ fontWeight: 'bold' }}>Inversiones Suplicon C.A. (Entrega Conforme)</Typography>
               <Box sx={{ flexGrow: 1, minHeight: '50px' }} />
               <Box sx={{ borderTop: '1px solid #000', pt: 1 }}>
-                <Typography align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>Nombre:</strong> {issuerData.name}</Typography>
-                <Typography align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>C.I:</strong> {issuerData.nationalId}</Typography>
-                <Typography align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>Lugar:</strong> {logisticsData.lugarDespacho}</Typography>
-                <Typography align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>Fecha:</strong> {formatDate(logisticsData.fechaDespacho)}</Typography>
+                <Typography display="block" align="left" variant="caption" sx={{ fontSize: '0.7rem', mb: 0.5 }}><strong>Nombre y Apellido:</strong> {issuerData.name}</Typography>
+                <Typography display="block" align="left" variant="caption" sx={{ fontSize: '0.7rem', mb: 0.5 }}><strong>C.I:</strong> {issuerData.nationalId}</Typography>
+                <Typography display="block" align="left" variant="caption" sx={{ fontSize: '0.7rem', mb: 0.5 }}><strong>Lugar:</strong> {logisticsData.lugarDespacho}</Typography>
+                <Typography display="block" align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>Fecha:</strong> {formatDate(logisticsData.fechaDespacho)}</Typography>
               </Box>
             </Box>
           </Box>
-          
+
           {/* Columna Derecha (Cliente / Recibe) */}
           <Box sx={{ width: '45%' }}>
             <Box sx={{ border: '1px solid #ccc', p: 1.5, display: 'flex', flexDirection: 'column' }}>
               <Typography variant="caption" display="block" sx={{ fontWeight: 'bold' }}>Cliente (Recibe Conforme)</Typography>
               <Box sx={{ flexGrow: 1, minHeight: '50px' }} />
               <Box sx={{ borderTop: '1px solid #000', pt: 1 }}>
-                <Typography align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>Nombre y Apellido:</strong></Typography>
-                <Typography align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>C.I:</strong></Typography>
-                <Typography align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>Lugar:</strong> {logisticsData.lugarRecepcion}</Typography>
-                <Typography align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>Fecha:</strong> {formatDate(logisticsData.fechaRecepcion)}</Typography>
+                <Typography display="block" align="left" variant="caption" sx={{ fontSize: '0.7rem', mb: 0.5 }}><strong>Nombre y Apellido:</strong></Typography>
+                <Typography display="block" align="left" variant="caption" sx={{ fontSize: '0.7rem', mb: 0.5 }}><strong>C.I:</strong></Typography>
+                <Typography display="block" align="left" variant="caption" sx={{ fontSize: '0.7rem', mb: 0.5 }}><strong>Lugar:</strong> {logisticsData.lugarRecepcion}</Typography>
+                <Typography display="block" align="left" variant="caption" sx={{ fontSize: '0.7rem' }}><strong>Fecha:</strong> {formatDate(logisticsData.fechaRecepcion)}</Typography>
               </Box>
             </Box>
           </Box>
-          
+
         </Box>
       </Box> {/* Fin del pie de página */}
+
+      {/* --- ETIQUETA DE COPIA (ORIGINAL / COPIA) --- */}
+      {copyLabel && (
+        <Box sx={{ mt: 2, textAlign: 'center', width: '100%' }}>
+          <Typography className="document-copy-label" variant="body1" sx={{ fontWeight: 'bold', color: 'error.main', textTransform: 'uppercase' }}>
+            {copyLabel}
+          </Typography>
+        </Box>
+      )}
     </Paper>
   );
 });

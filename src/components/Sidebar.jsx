@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  Box, List, ListItemButton, ListItemIcon, ListItemText, 
-  Divider, Typography, ListSubheader, IconButton, Tooltip 
+import {
+  Box, List, ListItemButton, ListItemIcon, ListItemText,
+  Divider, Typography, ListSubheader, IconButton, Tooltip
 } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -27,11 +27,11 @@ import MenuIcon from '@mui/icons-material/Menu';
 
 const Sidebar = () => {
   const location = useLocation();
-  const { isAdmin, isProgrammer } = useAuth(); 
-  
+  const { isAdmin, isProgrammer } = useAuth();
+
   // --- ¡CAMBIO AQUÍ! ---
   // Inicializamos en false para que empiece cerrado
-  const [isOpen, setIsOpen] = useState(false); 
+  const [isOpen, setIsOpen] = useState(false);
 
   const isActive = (path) => location.pathname === path;
 
@@ -58,8 +58,8 @@ const Sidebar = () => {
           transition: 'all 0.2s' // Transición suave
         }}
       >
-        <ListItemIcon 
-          sx={{ 
+        <ListItemIcon
+          sx={{
             minWidth: 0,
             mr: isOpen ? 2 : 'auto', // Margen solo si está abierto
             justifyContent: 'center',
@@ -68,16 +68,16 @@ const Sidebar = () => {
         >
           {icon}
         </ListItemIcon>
-        
+
         {/* El texto solo se muestra si isOpen es true */}
-        <ListItemText 
-          primary={text} 
-          sx={{ opacity: isOpen ? 1 : 0, display: isOpen ? 'block' : 'none' }} 
-          primaryTypographyProps={{ 
+        <ListItemText
+          primary={text}
+          sx={{ opacity: isOpen ? 1 : 0, display: isOpen ? 'block' : 'none' }}
+          primaryTypographyProps={{
             variant: 'body2',
             fontWeight: isActive(path) ? 'bold' : 'medium',
             color: isActive(path) ? 'text.primary' : 'text.secondary'
-          }} 
+          }}
         />
       </ListItemButton>
     </Tooltip>
@@ -85,11 +85,11 @@ const Sidebar = () => {
 
   // Función para renderizar los títulos de sección (se ocultan al cerrar)
   const renderSubheader = (text) => (
-    <ListSubheader 
-      sx={{ 
-        fontWeight: 'bold', 
-        letterSpacing: 1, 
-        fontSize: '0.75rem', 
+    <ListSubheader
+      sx={{
+        fontWeight: 'bold',
+        letterSpacing: 1,
+        fontSize: '0.75rem',
         opacity: isOpen ? 1 : 0, // Se desvanecen
         height: isOpen ? 'auto' : 0, // Desaparecen físicamente
         visibility: isOpen ? 'visible' : 'hidden',
@@ -122,12 +122,12 @@ const Sidebar = () => {
           {isOpen ? <MenuOpenIcon /> : <MenuIcon />}
         </IconButton>
       </Box>
-      
+
       <Divider />
 
       {/* --- PRINCIPAL --- */}
       <List subheader={renderSubheader('PRINCIPAL')}>
-        {renderItem('Dashboard', '/dashboard', <DashboardIcon />, '#1976d2')}
+        {renderItem('RESUMEN', '/dashboard', <DashboardIcon />, '#1976d2')}
       </List>
       <Divider variant="middle" sx={{ my: 1, opacity: isOpen ? 1 : 0.5 }} />
 

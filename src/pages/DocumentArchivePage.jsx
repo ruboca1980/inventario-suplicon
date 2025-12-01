@@ -26,7 +26,7 @@ const docTypes = ['Todos', 'Entrada', 'Salida', 'Nota de Entrega'];
 const DocumentArchivePage = () => {
   const [loading, setLoading] = useState(false);
   const [documents, setDocuments] = useState([]);
-  
+
   const [customerMap, setCustomerMap] = useState(new Map());
   const [supplierMap, setSupplierMap] = useState(new Map());
 
@@ -119,7 +119,7 @@ const DocumentArchivePage = () => {
   const handleViewDocument = async (document) => {
     setIsLoadingData(true);
     setPreviewData(document._id); // Usamos 'previewData' para guardar el ID y mostrar el spinner
-    
+
     try {
       const { _docType, _id } = document;
       let data;
@@ -144,7 +144,7 @@ const DocumentArchivePage = () => {
       alert(`Error al cargar los datos: ${error.message}`);
       setPreviewData(null); // Limpiar en caso de error
     }
-    
+
     setIsLoadingData(false);
   };
 
@@ -169,7 +169,7 @@ const DocumentArchivePage = () => {
               value={filterType}
               onChange={(e, newValue) => setFilterType(newValue || 'Todos')}
               renderInput={(params) => <TextField {...params} label="Tipo de Documento" />}
-              sx={{ width: '100%', flex: { sm: 4 } }} 
+              sx={{ width: '100%', flex: { sm: 4 } }}
             />
             <TextField
               fullWidth
@@ -210,7 +210,7 @@ const DocumentArchivePage = () => {
             rows={documents}
             columns={columns}
             loading={loading}
-            getRowId={(row) => row._id} 
+            getRowId={(row) => row._id}
             localeText={esES.components.MuiDataGrid.defaultProps.localeText}
             pageSizeOptions={[10, 25, 50]}
             initialState={{
@@ -222,29 +222,33 @@ const DocumentArchivePage = () => {
 
       {/* --- ¡SECCIÓN DE MODALES AÑADIDA! --- */}
       {/* (Están ocultos hasta que 'activeModal' y 'previewData' se establezcan) */}
-      
+
       {/* Modal de Entrada */}
       <EntryPreviewModal
         open={activeModal === 'ENTRADA'}
         onClose={handleCloseModal}
-        onConfirm={() => {}} // No hacemos nada al confirmar, solo cerramos
+        onConfirm={() => { }} // No hacemos nada al confirmar, solo cerramos
         entryData={previewData}
+        isSaved={true} // ¡IMPORTANTE! Oculta el botón de guardar
       />
-      
+
       {/* Modal de Salida */}
       <ExitPreviewModal
         open={activeModal === 'SALIDA'}
         onClose={handleCloseModal}
-        onConfirm={() => {}} // Solo cerramos
+        onConfirm={() => { }} // Solo cerramos
         exitData={previewData}
+        isSaved={true} // ¡IMPORTANTE! Oculta el botón de guardar
       />
-      
+
       {/* Modal de Nota de Entrega */}
       <DeliveryNotePreviewModal
         open={activeModal === 'Nota de Entrega'}
         onClose={handleCloseModal}
-        onConfirm={() => {}} // Solo cerramos
+        onConfirm={() => { }} // Solo cerramos
         neData={previewData}
+        isSaved={true} // ¡IMPORTANTE! Oculta el botón de guardar
+        isReadOnly={true} // Oculta el botón "Finalizar"
       />
     </>
   );

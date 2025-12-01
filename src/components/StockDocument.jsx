@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Grid, Divider } from '@mui/material';
 import logo from '../assets/logo_nuevo-removebg-preview.png';
 
-const StockDocument = React.forwardRef(({ stockData }, ref) => {
+const StockDocument = React.forwardRef(({ stockData, isForPrint = false }, ref) => {
     if (!stockData) return null;
 
     return (
@@ -11,7 +11,7 @@ const StockDocument = React.forwardRef(({ stockData }, ref) => {
             p: '20mm', // Padding similar a margen de impresión
             margin: 'auto', // Centrado
             width: '216mm', // Ancho Carta
-            maxWidth: '100%', // Asegura que no se desborde en pantallas pequeñas
+            maxWidth: isForPrint ? 'none' : '100%', // Asegura que no se desborde en pantallas pequeñas
             minHeight: '279mm', // Alto Carta (mínimo)
             backgroundColor: '#fff',
             color: '#000',
@@ -23,11 +23,11 @@ const StockDocument = React.forwardRef(({ stockData }, ref) => {
                 border: 'none !important',
                 maxWidth: 'none !important',
                 width: '100% !important',
-                height: '100% !important', // Ocupa toda la altura de @page
+                height: 'auto !important', // Permitir que crezca para múltiples páginas
                 minHeight: 'auto !important',
                 margin: '0 !important',
                 padding: '10mm !important', // Padding real de impresión
-                }
+            }
         }}>
             {/* --- ENCABEZADO --- */}
             <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
@@ -41,28 +41,26 @@ const StockDocument = React.forwardRef(({ stockData }, ref) => {
             {/* --- TABLA DE PRODUCTOS --- */}
             <Box sx={{ flexGrow: 1, mb: 4 }}> {/* Ocupa espacio disponible */}
                 <TableContainer>
-                    <Table size="small">
+                    <Table size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
                         <TableHead>
                             <TableRow>
-                                <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Código</TableCell>
-                                <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Categoría</TableCell>
-                                <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Descripción</TableCell>
-                                <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Marca</TableCell>
-                                <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Tipo</TableCell>
-                                <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Unidad</TableCell>
-                                <TableCell sx={{ color: '#000', fontWeight: 'bold' }} align="right">Stock Actual</TableCell>
+                                <TableCell sx={{ color: '#000', fontWeight: 'bold', width: '15%', fontSize: '0.75rem', padding: '4px' }}>Categoría</TableCell>
+                                <TableCell sx={{ color: '#000', fontWeight: 'bold', width: '42%', fontSize: '0.75rem', padding: '4px' }}>Descripción</TableCell>
+                                <TableCell sx={{ color: '#000', fontWeight: 'bold', width: '15%', fontSize: '0.75rem', padding: '4px' }}>Marca</TableCell>
+                                <TableCell sx={{ color: '#000', fontWeight: 'bold', width: '10%', fontSize: '0.75rem', padding: '4px' }}>Tipo</TableCell>
+                                <TableCell sx={{ color: '#000', fontWeight: 'bold', width: '8%', fontSize: '0.75rem', padding: '4px' }}>Unidad</TableCell>
+                                <TableCell sx={{ color: '#000', fontWeight: 'bold', width: '10%', fontSize: '0.75rem', padding: '4px' }} align="right">Stock Actual</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {stockData.map((item) => (
                                 <TableRow key={item.id}>
-                                    <TableCell sx={{ color: '#000' }}>{item.sku || ''}</TableCell>
-                                    <TableCell sx={{ color: '#000' }}>{item.category || ''}</TableCell>
-                                    <TableCell sx={{ color: '#000' }}>{item.productName || ''}</TableCell>
-                                    <TableCell sx={{ color: '#000' }}>{item.brand || ''}</TableCell>
-                                    <TableCell sx={{ color: '#000' }}>{item.type || ''}</TableCell>
-                                    <TableCell sx={{ color: '#000' }}>{item.unitOfMeasure || ''}</TableCell>
-                                    <TableCell sx={{ color: '#000' }} align="right">{item.currentStock ?? 0}</TableCell>
+                                    <TableCell sx={{ color: '#000', wordWrap: 'break-word', fontSize: '0.75rem', padding: '4px' }}>{item.category || ''}</TableCell>
+                                    <TableCell sx={{ color: '#000', wordWrap: 'break-word', fontSize: '0.75rem', padding: '4px' }}>{item.productName || ''}</TableCell>
+                                    <TableCell sx={{ color: '#000', wordWrap: 'break-word', fontSize: '0.75rem', padding: '4px' }}>{item.brand || ''}</TableCell>
+                                    <TableCell sx={{ color: '#000', wordWrap: 'break-word', fontSize: '0.75rem', padding: '4px' }}>{item.type || ''}</TableCell>
+                                    <TableCell sx={{ color: '#000', wordWrap: 'break-word', fontSize: '0.75rem', padding: '4px' }}>{item.unitOfMeasure || ''}</TableCell>
+                                    <TableCell sx={{ color: '#000', wordWrap: 'break-word', fontSize: '0.75rem', padding: '4px' }} align="right">{item.currentStock ?? 0}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

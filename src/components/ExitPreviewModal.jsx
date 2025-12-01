@@ -7,7 +7,7 @@ import ExitDocument from './ExitDocument.jsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-const ExitPreviewModal = ({ open, onClose, onConfirm, exitData }) => {
+const ExitPreviewModal = ({ open, onClose, onConfirm, exitData, isSaved }) => {
     const documentRef = useRef();
     const [isSaving, setIsSaving] = useState(false);
 
@@ -19,42 +19,42 @@ const ExitPreviewModal = ({ open, onClose, onConfirm, exitData }) => {
         const input = documentRef.current;
         if (!input) return;
         html2canvas(input, { scale: 2, useCORS: true, scrollY: -window.scrollY })
-        .then((canvas) => {
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'letter');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
-            const ratio = pdfWidth / imgWidth;
-            const imgHeightInPdf = imgHeight * ratio;
-            let position = 0;
-            if (imgHeightInPdf <= pageHeight) {
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeightInPdf);
-            } else {
-                let heightLeft = imgHeightInPdf;
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdf);
-                heightLeft -= pageHeight;
-                while (heightLeft > 0) {
-                    position = position - pageHeight;
-                    pdf.addPage();
+            .then((canvas) => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'letter');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                const ratio = pdfWidth / imgWidth;
+                const imgHeightInPdf = imgHeight * ratio;
+                let position = 0;
+                if (imgHeightInPdf <= pageHeight) {
+                    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeightInPdf);
+                } else {
+                    let heightLeft = imgHeightInPdf;
                     pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdf);
                     heightLeft -= pageHeight;
+                    while (heightLeft > 0) {
+                        position = position - pageHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdf);
+                        heightLeft -= pageHeight;
+                    }
                 }
-            }
-            pdf.save(`Salida-${exitData.correlative || 'preview'}.pdf`);
-        });
+                pdf.save(`Salida-${exitData.correlative || 'preview'}.pdf`);
+            });
     };
 
     const handleConfirmClick = async () => {
         setIsSaving(true);
         try {
             await onConfirm();
+            setIsSaving(false);
         } catch (error) {
             console.error("Fallo al guardar la salida:", error);
             setIsSaving(false);
         }
-        // No cerramos el modal aquí, se cierra desde handleSubmitExit en ExitPage si todo va bien
     };
 
     return (
@@ -63,11 +63,19 @@ const ExitPreviewModal = ({ open, onClose, onConfirm, exitData }) => {
                 <Toolbar>
                     <IconButton edge="start" color="inherit" onClick={onClose} aria-label="close" disabled={isSaving}><CloseIcon /></IconButton>
                     <Typography sx={{ ml: 2, flex: 1 }} variant="h6">Vista Previa de Salida</Typography>
-                    <Button color="inherit" startIcon={<PrintIcon />} onClick={handlePrint} disabled={isSaving}>Imprimir</Button>
-                    <Button color="inherit" startIcon={<PictureAsPdfIcon />} onClick={handleExportPDF} disabled={isSaving}>Exportar a PDF</Button>
-                    <Button color="inherit" onClick={handleConfirmClick} variant="outlined" disabled={isSaving}>
-                        {isSaving ? 'Guardando...' : 'Confirmar y Guardar'}
-                    </Button>
+
+                    {isSaved && (
+                        <>
+                            <Button color="inherit" startIcon={<PrintIcon />} onClick={handlePrint} disabled={isSaving}>Imprimir</Button>
+                            <Button color="inherit" startIcon={<PictureAsPdfIcon />} onClick={handleExportPDF} disabled={isSaving}>Exportar a PDF</Button>
+                        </>
+                    )}
+
+                    {!isSaved && (
+                        <Button color="inherit" onClick={handleConfirmClick} variant="outlined" disabled={isSaving}>
+                            {isSaving ? 'Guardando...' : 'Confirmar y Guardar'}
+                        </Button>
+                    )}
                 </Toolbar>
             </AppBar>
 
@@ -122,11 +130,15 @@ const ExitPreviewModal = ({ open, onClose, onConfirm, exitData }) => {
             {/* --- FIN DE ESTILOS DE IMPRESIÓN --- */}
 
             <Box className="print-background-container" sx={{
-                p: 3, 
-                backgroundColor: '#e0e0e0', 
-                minHeight: '100vh', 
-                overflowY: 'auto' }}>
-                 {/* ID único para este documento */}
+                p: 3,
+                backgroundColor: '#e0e0e0',
+                minHeight: 'calc(100vh - 64px)', // Ajuste para restar la altura aproximada del AppBar
+                overflow: 'auto',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-start'
+            }}>
+                {/* ID único para este documento */}
                 <div id="document-to-print-exit">
                     <ExitDocument ref={documentRef} exitData={exitData} />
                 </div>

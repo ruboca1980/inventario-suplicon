@@ -1,9 +1,11 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  onAuthStateChanged, 
-  signOut 
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  setPersistence,
+  browserSessionPersistence
 } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -43,7 +45,9 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  const login = (email, password) => {
+  const login = async (email, password) => {
+    // Establecer persistencia de sesión (se cierra al cerrar pestaña/ventana)
+    await setPersistence(auth, browserSessionPersistence);
     return signInWithEmailAndPassword(auth, email, password);
   };
 
@@ -51,15 +55,61 @@ export const AuthProvider = ({ children }) => {
     return signOut(auth);
   };
 
+  // --- INACTIVIDAD (10 MINUTOS) ---
+  const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutos en milisegundos
+
+  const handleLogout = useCallback(() => {
+    if (user) {
+      console.log("Cerrando sesión por inactividad...");
+      logout();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let inactivityTimer;
+
+    const resetTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(handleLogout, INACTIVITY_LIMIT);
+    };
+
+    // Eventos a escuchar
+    const events = ['mousemove', 'keydown', 'click', 'scroll'];
+
+    // Iniciar timer
+    resetTimer();
+
+    // Agregar listeners
+    events.forEach(event => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Limpieza
+    return () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      events.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [user, handleLogout]);
+  // --------------------------------
+
   // Efecto maestro: Escucha cambios de sesión Y cambios en el perfil de base de datos
   useEffect(() => {
+    // Configurar persistencia de sesión al cargar la app
+    setPersistence(auth, browserSessionPersistence).catch(error => {
+      console.error("Error setting persistence:", error);
+    });
+
     let unsubscribeFirestore = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         // 1. Si hay usuario logueado, escuchamos su documento en Firestore en tiempo real
         const userRef = doc(db, "users", currentUser.uid);
-        
+
         unsubscribeFirestore = onSnapshot(userRef, (docSnap) => {
           if (docSnap.exists()) {
             // Combinamos la info de Auth con la info de la Base de Datos

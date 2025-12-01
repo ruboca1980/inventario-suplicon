@@ -1,5 +1,5 @@
-import { 
-  collection, query, where, orderBy, getDocs, doc, getDoc, Timestamp 
+import {
+  collection, query, where, orderBy, getDocs, doc, getDoc, Timestamp
 } from "firebase/firestore";
 import { db } from './config';
 
@@ -182,9 +182,9 @@ export const searchAllDocuments = async (filters = {}) => {
 export const getEntryPreviewData = async (docId) => {
   const batchSnap = await getDoc(doc(db, 'transaction_batches', docId));
   if (!batchSnap.exists()) throw new Error("No se encontró el lote de entrada.");
-  
+
   const batchData = batchSnap.data();
-  
+
   // Promesas para obtener todo en paralelo
   const itemsPromise = getTransactionsForBatch(docId);
   const supplierPromise = getDoc(doc(db, 'suppliers', batchData.supplierId));
@@ -213,7 +213,7 @@ export const getEntryPreviewData = async (docId) => {
 export const getExitPreviewData = async (docId) => {
   const batchSnap = await getDoc(doc(db, 'transaction_batches', docId));
   if (!batchSnap.exists()) throw new Error("No se encontró el lote de salida.");
-  
+
   const batchData = batchSnap.data();
 
   // Promesas en paralelo
@@ -240,8 +240,81 @@ export const getExitPreviewData = async (docId) => {
 export const getDeliveryNotePreviewData = async (docId) => {
   const noteSnap = await getDoc(doc(db, 'deliveryNotes', docId));
   if (!noteSnap.exists()) throw new Error("No se encontró la Nota de Entrega.");
-  
+
   // La Nota de Entrega ya se guarda como un "snapshot"
   // por lo que tiene todos los datos que el modal necesita.
   return noteSnap.data();
+};
+
+/**
+ * Obtiene el historial completo de transacciones para auditoría.
+ * Incluye: Entradas, Salidas y Notas de Entrega.
+ * Muestra: Fecha, Hora, Tipo, Nombre (Entidad), Usuario (Creador).
+ */
+export const getAuditHistory = async () => {
+  try {
+    // 1. Obtener Lotes de Transacción (Entradas y Salidas)
+    const batchesRef = collection(db, 'transaction_batches');
+    const qBatches = query(batchesRef, orderBy('date', 'desc'));
+    const batchesSnap = await getDocs(qBatches);
+
+    // 2. Obtener Notas de Entrega
+    const notesRef = collection(db, 'deliveryNotes');
+    const qNotes = query(notesRef, orderBy('createdAt', 'desc'));
+    const notesSnap = await getDocs(qNotes);
+
+    // 3. Mapear Lotes
+    // Necesitamos obtener nombres de Cliente/Proveedor si no están en el lote (optimización: asumimos que searchAllDocuments ya lo hace, pero aquí lo haremos simplificado o reutilizaremos lógica si es necesario.
+    // Para auditoría rápida, el ID o una búsqueda rápida es mejor. 
+    // PERO, transaction_batches NO guarda el nombre de la entidad, solo el ID.
+    // Para hacerlo eficiente, podríamos hacer lo mismo que searchAllDocuments o simplemente mostrar el ID si no queremos hacer N lecturas.
+    // MEJORA: Usaremos una lógica similar a searchAllDocuments para los nombres, pero simplificada.
+
+    // Para no complicar con N lecturas aquí, vamos a devolver los datos básicos y dejar que el componente o una carga diferida maneje los nombres si es crítico.
+    // Sin embargo, el usuario pidió "Nombre". Intentaremos obtenerlos de los mapas en memoria en el componente si es posible, 
+    // o hacer un fetch rápido de todos los clientes/proveedores (son pocos) y mapear.
+    // O mejor: transaction_batches tiene auditData.
+
+    const history = [];
+
+    batchesSnap.forEach(doc => {
+      const data = doc.data();
+      history.push({
+        id: doc.id,
+        rawDate: data.date ? data.date.toDate() : new Date(),
+        date: data.date ? data.date.toDate().toLocaleDateString('es-VE') : 'N/A',
+        time: data.date ? data.date.toDate().toLocaleTimeString('es-VE') : 'N/A',
+        type: data.type, // ENTRADA / SALIDA
+        entityId: data.supplierId || data.customerId || 'N/A', // El componente resolverá el nombre
+        entityType: data.type === 'ENTRADA' ? 'Proveedor' : 'Cliente',
+        user: data.createdByName || data.createdByEmail || 'Desconocido',
+        correlative: data.correlative
+      });
+    });
+
+    notesSnap.forEach(doc => {
+      const data = doc.data();
+      history.push({
+        id: doc.id,
+        rawDate: data.createdAt ? data.createdAt.toDate() : new Date(),
+        date: data.createdAt ? data.createdAt.toDate().toLocaleDateString('es-VE') : 'N/A',
+        time: data.createdAt ? data.createdAt.toDate().toLocaleTimeString('es-VE') : 'N/A',
+        type: 'NOTA DE ENTREGA',
+        entityId: data.customerData?.id || data.customerData?.rif || 'N/A',
+        entityNameFallback: data.customerData?.name, // Las notas guardan el nombre snapshot
+        entityType: 'Cliente',
+        user: data.createdByName || data.createdByEmail || 'Desconocido',
+        correlative: data.correlative
+      });
+    });
+
+    // 4. Ordenar por fecha descendente
+    history.sort((a, b) => b.rawDate - a.rawDate);
+
+    return history;
+
+  } catch (error) {
+    console.error("Error obteniendo historial de auditoría:", error);
+    return [];
+  }
 };

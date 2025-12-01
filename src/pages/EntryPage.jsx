@@ -36,6 +36,8 @@ const EntryPage = () => {
   const [previewData, setPreviewData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const [isEntrySaved, setIsEntrySaved] = useState(false);
+
   useEffect(() => {
     const unsubProducts = getProductsRealTime(setProducts);
     const unsubSuppliers = getSuppliersRealTime(setSuppliers);
@@ -68,7 +70,6 @@ const EntryPage = () => {
 
   const handleAddItem = () => {
     if (!selectedProduct || !quantity || quantity <= 0) {
-      // 3. VALIDACIÓN CON NOTISTACK
       enqueueSnackbar("Selecciona un producto y una cantidad válida.", { variant: 'warning' });
       return;
     }
@@ -78,54 +79,76 @@ const EntryPage = () => {
       return;
     }
 
-    if (entryItems.find(item => item.id === selectedProduct.id)) {
-      // 3. VALIDACIÓN CON NOTISTACK
-      enqueueSnackbar('Este producto ya ha sido añadido.', { variant: 'warning' });
-      return;
+    // VERIFICAR SI YA EXISTE
+    const existingItemIndex = entryItems.findIndex(item => item.id === selectedProduct.id);
+
+    if (existingItemIndex !== -1) {
+      // SI EXISTE, ACTUALIZAMOS LA CANTIDAD
+      const updatedItems = [...entryItems];
+      updatedItems[existingItemIndex].quantity += parseInt(quantity);
+
+      setEntryItems(updatedItems);
+      enqueueSnackbar(`Se actualizó la cantidad de ${selectedProduct.description}.`, { variant: 'info', autoHideDuration: 1500 });
+    } else {
+      // SI NO EXISTE, LO CREAMOS
+      const newItem = {
+        id: selectedProduct.id,
+        sku: selectedProduct.sku,
+        category: selectedProduct.category,
+        description: selectedProduct.description,
+        brand: selectedProduct.brand,
+        unitOfMeasure: selectedProduct.unitOfMeasure,
+        quantity: parseInt(quantity),
+        lotOrSerials: lotNumber,
+        serials: [],
+      };
+      setEntryItems([...entryItems, newItem]);
+      enqueueSnackbar('Producto añadido a la lista.', { variant: 'info', autoHideDuration: 1500 });
     }
 
-    const newItem = {
-      id: selectedProduct.id,
-      sku: selectedProduct.sku,
-      category: selectedProduct.category,
-      description: selectedProduct.description,
-      brand: selectedProduct.brand,
-      unitOfMeasure: selectedProduct.unitOfMeasure,
-      quantity: parseInt(quantity),
-      lotOrSerials: lotNumber,
-      serials: [],
-    };
-
-    setEntryItems([...entryItems, newItem]);
     setSelectedProduct(null);
     setSearchTerm('');
     setQuantity(1);
     setLotNumber('');
-    // 3. FEEDBACK POSITIVO SUTIL
-    enqueueSnackbar('Producto añadido a la lista.', { variant: 'info', autoHideDuration: 1500 });
   };
 
   const handleSaveFromSerialManager = (savedSerials) => {
     if (!selectedProduct) return;
 
-    const newItem = {
-      id: selectedProduct.id,
-      sku: selectedProduct.sku,
-      category: selectedProduct.category,
-      description: selectedProduct.description,
-      brand: selectedProduct.brand,
-      unitOfMeasure: selectedProduct.unitOfMeasure,
-      quantity: parseInt(quantity),
-      lotOrSerials: savedSerials.join(', '),
-      serials: savedSerials,
-    };
+    // VERIFICAR SI YA EXISTE
+    const existingItemIndex = entryItems.findIndex(item => item.id === selectedProduct.id);
 
-    setEntryItems([...entryItems, newItem]);
+    if (existingItemIndex !== -1) {
+      // SI EXISTE, ACTUALIZAMOS CANTIDAD Y SERIALES
+      const updatedItems = [...entryItems];
+      const existingItem = updatedItems[existingItemIndex];
+
+      existingItem.quantity += parseInt(quantity);
+      existingItem.serials = [...existingItem.serials, ...savedSerials];
+      existingItem.lotOrSerials = existingItem.serials.join(', ');
+
+      setEntryItems(updatedItems);
+      enqueueSnackbar(`Se añadieron nuevos seriales a ${selectedProduct.description}.`, { variant: 'info', autoHideDuration: 1500 });
+    } else {
+      // SI NO EXISTE, LO CREAMOS
+      const newItem = {
+        id: selectedProduct.id,
+        sku: selectedProduct.sku,
+        category: selectedProduct.category,
+        description: selectedProduct.description,
+        brand: selectedProduct.brand,
+        unitOfMeasure: selectedProduct.unitOfMeasure,
+        quantity: parseInt(quantity),
+        lotOrSerials: savedSerials.join(', '),
+        serials: savedSerials,
+      };
+      setEntryItems([...entryItems, newItem]);
+      enqueueSnackbar('Equipos añadidos a la lista.', { variant: 'info', autoHideDuration: 1500 });
+    }
+
     setSelectedProduct(null);
     setSearchTerm('');
     setQuantity(1);
-    // 3. FEEDBACK POSITIVO SUTIL
-    enqueueSnackbar('Equipos añadidos a la lista.', { variant: 'info', autoHideDuration: 1500 });
   };
 
   const handleRemoveItem = (id) => {
@@ -153,6 +176,7 @@ const EntryPage = () => {
         date: formattedDate,
         items: entryItems,
       });
+      setIsEntrySaved(false); // Resetear estado de guardado
       setIsPreviewOpen(true);
     } catch (error) {
       // 3. ERROR DE CONEXIÓN
@@ -176,14 +200,22 @@ const EntryPage = () => {
 
     try {
       await createInventoryEntry(entryData);
-      setIsPreviewOpen(false);
+      // NO cerramos el modal, solo actualizamos el estado
+      setIsEntrySaved(true);
       // 3. ÉXITO FINAL
-      enqueueSnackbar("¡Entrada registrada con éxito!", { variant: 'success' });
-      navigate('/dashboard');
+      enqueueSnackbar("¡Entrada registrada con éxito! Ahora puede imprimir o exportar.", { variant: 'success' });
+      // navigate('/dashboard'); // Se mueve al cierre del modal
     } catch (error) {
       console.error(error);
       // 3. ERROR CRÍTICO
       enqueueSnackbar(`Error: ${error.message}`, { variant: 'error' });
+    }
+  };
+
+  const handleClosePreview = () => {
+    setIsPreviewOpen(false);
+    if (isEntrySaved) {
+      navigate('/dashboard');
     }
   };
 
@@ -255,7 +287,13 @@ const EntryPage = () => {
       </Box>
 
       <SerialManager open={isSerialManagerOpen} onClose={() => setIsSerialManagerOpen(false)} onSave={handleSaveFromSerialManager} quantityNeeded={parseInt(quantity) || 0} />
-      <EntryPreviewModal open={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} onConfirm={handleSubmitEntry} entryData={previewData} />
+      <EntryPreviewModal
+        open={isPreviewOpen}
+        onClose={handleClosePreview}
+        onConfirm={handleSubmitEntry}
+        entryData={previewData}
+        isSaved={isEntrySaved}
+      />
     </Paper>
   );
 };

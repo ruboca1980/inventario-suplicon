@@ -28,7 +28,7 @@ const StockPreviewModal = ({ open, onClose, stockData }) => {
             const pdfHeight = pdf.internal.pageSize.getHeight();
             const imgWidth = canvas.width;
             const imgHeight = canvas.height;
-            
+
             // Calcula la altura de la imagen en el PDF manteniendo la proporción del ancho
             const ratio = pdfWidth / imgWidth;
             const imgHeightInPdf = imgHeight * ratio;
@@ -49,43 +49,101 @@ const StockPreviewModal = ({ open, onClose, stockData }) => {
                     heightLeft -= pdfHeight;
                 }
             }
-            
+
             pdf.save(`Reporte_Stock_${new Date().toLocaleDateString('es-VE')}.pdf`);
         });
     };
     return (
-        <Dialog fullScreen open={open} onClose={onClose}>
-            <AppBar sx={{ position: 'relative' }}>
-                <Toolbar>
-                    <IconButton edge="start" color="inherit" onClick={onClose}><CloseIcon /></IconButton>
-                    <Typography sx={{ ml: 2, flex: 1 }} variant="h6">Vista Previa - Reporte de Stock</Typography>
-                    <Button color="inherit" startIcon={<PrintIcon />} onClick={handlePrint}>Imprimir</Button>
-                    <Button color="inherit" startIcon={<PictureAsPdfIcon />} onClick={handleExportPDF}>Exportar a PDF</Button>
-                </Toolbar>
-            </AppBar>
+        <>
+            <Dialog fullScreen open={open} onClose={onClose}>
+                <AppBar sx={{ position: 'relative' }}>
+                    <Toolbar>
+                        <IconButton edge="start" color="inherit" onClick={onClose}><CloseIcon /></IconButton>
+                        <Typography sx={{ ml: 2, flex: 1 }} variant="h6">Vista Previa - Reporte de Stock</Typography>
+                        <Button color="inherit" startIcon={<PrintIcon />} onClick={handlePrint}>Imprimir</Button>
+                        <Button color="inherit" startIcon={<PictureAsPdfIcon />} onClick={handleExportPDF}>Exportar a PDF</Button>
+                    </Toolbar>
+                </AppBar>
 
-            {/* Estilos de impresión (sin cambios relevantes aquí) */}
-            <style>
-                {`
-                    @page { size: letter; margin: 10mm !important; }
-                    @media print {
-                        html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100vh !important; overflow: hidden !important; }
-                        body * { visibility: hidden; }
-                        #document-to-print, #document-to-print * { visibility: visible; }
-                        #document-to-print { position: absolute; left: 0; top: 0; width: 100%; height: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; display: flex; flex-direction: column; }
-                        #document-to-print > .MuiPaper-root { max-width: none !important; width: 100% !important; height: 100% !important; box-shadow: none !important; border: none !important; margin: 0 !important; padding: 10mm !important; display: flex !important; flex-direction: column !important; min-height: auto !important; }
-                        .MuiAppBar-root { display: none !important; }
-                        .print-background-container { background-color: transparent !important; padding: 0 !important; height: auto !important; overflow: visible !important; }
-                    }
-                `}
-            </style>
-            
-            <Box className="print-background-container" sx={{ p: 3, backgroundColor: '#e0e0e0', minHeight: '100vh', overflowY: 'auto' }}>
-                <div id="document-to-print">
+                <style>
+                    {`
+                        @media print {
+                            @page {
+                                size: letter;
+                                margin: 0mm;
+                            }
+                            html, body { 
+                                margin: 0 !important; padding: 0 !important; 
+                                width: 216mm !important; height: auto !important; 
+                                overflow: visible !important;
+                                background-color: #fff !important;
+                            }
+                            
+                            /* Hide everything by default */
+                            body * { visibility: hidden; }
+                            
+                            /* Show only the print container and its children */
+                            #document-to-print, #document-to-print * { 
+                                visibility: visible; 
+                            }
+
+                            /* Position the print container to fill the page */
+                            #document-to-print {
+                                position: absolute !important;
+                                left: 0 !important;
+                                top: 0 !important;
+                                width: 216mm !important; /* Force Letter width */
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                background-color: #fff;
+                                display: block !important;
+                                z-index: 9999;
+                            }
+
+                            /* Style the pages inside */
+                            #document-to-print > .MuiPaper-root {
+                                width: 100% !important; 
+                                max-width: none !important; /* CRITICAL: Override max-width */
+                                min-height: 279mm !important; /* Force Letter height */
+                                margin: 0 !important;
+                                padding: 15mm !important; /* Print margins */
+                                box-shadow: none !important; 
+                                border: none !important; 
+                                height: auto !important;
+                                box-sizing: border-box !important;
+                            }
+
+                            /* Hide the app bar and preview container explicitly */
+                            .MuiAppBar-root { display: none !important; } 
+                            .print-background-container { display: none !important; }
+
+                            /* Reset Dialog styles */
+                            .MuiDialog-root, .MuiDialog-container {
+                                position: static !important;
+                                overflow: visible !important;
+                                width: auto !important;
+                                height: auto !important;
+                                background: none !important;
+                                box-shadow: none !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                display: none !important;
+                            }
+                        }
+                    `}
+                </style>
+
+                <Box className="print-background-container" sx={{ p: 3, backgroundColor: '#e0e0e0', minHeight: '100vh', overflowY: 'auto', display: 'flex', justifyContent: 'center' }}>
+                    {/* Vista previa en pantalla */}
                     <StockDocument ref={documentRef} stockData={stockData} />
-                </div>
-            </Box>
-        </Dialog>
+                </Box>
+            </Dialog>
+
+            {/* Contenido oculto para imprimir - OUTSIDE the Dialog */}
+            <div id="document-to-print" style={{ display: 'none' }}>
+                <StockDocument stockData={stockData} isForPrint={true} />
+            </div>
+        </>
     );
 };
 

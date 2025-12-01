@@ -82,33 +82,33 @@ const EntryDocument = React.forwardRef(({ entryData }, ref) => {
         {/* --- TABLA DE PRODUCTOS --- */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom>Productos Ingresados</Typography>
-          {/* Contenedor de la tabla. Oculta el desbordamiento al imprimir. */}
-          <TableContainer sx={{ '@media print': { overflow: 'hidden' } }}>
+          {/* Contenedor de la tabla. Aseguramos que no haya scroll horizontal. */}
+          <TableContainer sx={{ overflowX: 'hidden' }}>
             {/* tableLayout: 'fixed' es la clave para la impresión del navegador.
                 Fuerza a la tabla a respetar el width: '100%' y a
                 ajustar (wrap) el texto en lugar de desbordarse. */}
             <Table size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Código</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Categoría</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Descripción</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Marca</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Seriales</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }}>Unidad</TableCell>
-                  <TableCell sx={{ color: '#000', fontWeight: 'bold' }} align="right">Cantidad</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', fontSize: '11px', width: '10%', padding: '4px' }}>Código</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', fontSize: '11px', width: '12%', padding: '4px' }}>Categoría</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', fontSize: '11px', width: '35%', padding: '4px' }}>Descripción</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', fontSize: '11px', width: '10%', padding: '4px' }}>Marca</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', fontSize: '11px', width: '20%', padding: '4px' }}>Seriales</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', fontSize: '11px', width: '8%', padding: '4px' }}>Unidad</TableCell>
+                  <TableCell sx={{ color: '#000', fontWeight: 'bold', fontSize: '11px', width: '5%', padding: '4px' }} align="right">Cant.</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {entryData.items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell sx={{ color: '#000' }}>{item.sku}</TableCell>
-                    <TableCell sx={{ color: '#000' }}>{item.category}</TableCell>
-                    <TableCell sx={{ color: '#000' }}>{item.description}</TableCell>
-                    <TableCell sx={{ color: '#000' }}>{item.brand}</TableCell>
-                    <TableCell sx={{ color: '#000' }}>{item.lotOrSerials}</TableCell>
-                    <TableCell sx={{ color: '#000' }}>{item.unitOfMeasure}</TableCell>
-                    <TableCell sx={{ color: '#000' }} align="right">{item.quantity}</TableCell>
+                    <TableCell sx={{ color: '#000', fontSize: '10px', padding: '4px' }}>{item.sku}</TableCell>
+                    <TableCell sx={{ color: '#000', fontSize: '10px', padding: '4px' }}>{item.category}</TableCell>
+                    <TableCell sx={{ color: '#000', fontSize: '10px', padding: '4px', wordWrap: 'break-word' }}>{item.description}</TableCell>
+                    <TableCell sx={{ color: '#000', fontSize: '10px', padding: '4px' }}>{item.brand}</TableCell>
+                    <TableCell sx={{ color: '#000', fontSize: '10px', padding: '4px', wordWrap: 'break-word' }}>{item.lotOrSerials}</TableCell>
+                    <TableCell sx={{ color: '#000', fontSize: '10px', padding: '4px' }}>{item.unitOfMeasure}</TableCell>
+                    <TableCell sx={{ color: '#000', fontSize: '10px', padding: '4px' }} align="right">{item.quantity}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -162,7 +162,7 @@ const EntryDocument = React.forwardRef(({ entryData }, ref) => {
               </Box>
             </Box>
           </Box>
-          
+
         </Box>
       </Box> {/* Fin del pie de página */}
     </Paper>
