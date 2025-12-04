@@ -10,6 +10,13 @@ import { getSuppliersRealTime } from '../firebase/supplierServices';
 import { getStaffRealTime } from '../firebase/staffServices';
 import { createInventoryEntry, getNextCorrelative } from '../firebase/transactionServices';
 import { getStockByProductId } from '../firebase/inventoryServices';
+import { addSupplier } from '../firebase/supplierServices';
+import { addStaff } from '../firebase/staffServices';
+import { addProduct, checkSkuExists } from '../firebase/productServices';
+import SupplierForm from '../components/SupplierForm.jsx';
+import StaffForm from '../components/StaffForm.jsx';
+import ProductForm from '../components/ProductForm.jsx';
+import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from 'react-router-dom';
 
 // 1. IMPORTAR NOTISTACK
@@ -35,6 +42,10 @@ const EntryPage = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [isReceiverModalOpen, setIsReceiverModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   const [isEntrySaved, setIsEntrySaved] = useState(false);
 
@@ -219,6 +230,44 @@ const EntryPage = () => {
     }
   };
 
+  const handleSaveSupplier = async (newSupplier) => {
+    try {
+      await addSupplier(newSupplier);
+      enqueueSnackbar('Proveedor añadido correctamente.', { variant: 'success' });
+      setIsSupplierModalOpen(false);
+    } catch (error) {
+      console.error(error);
+      enqueueSnackbar('Error al añadir proveedor.', { variant: 'error' });
+    }
+  };
+
+  const handleSaveReceiver = async (newStaff) => {
+    try {
+      await addStaff(newStaff);
+      enqueueSnackbar('Personal añadido correctamente.', { variant: 'success' });
+      setIsReceiverModalOpen(false);
+    } catch (error) {
+      console.error(error);
+      enqueueSnackbar('Error al añadir personal.', { variant: 'error' });
+    }
+  };
+
+  const handleSaveProduct = async (newProduct) => {
+    try {
+      const skuExists = await checkSkuExists(newProduct.sku);
+      if (skuExists) {
+        enqueueSnackbar(`El código "${newProduct.sku}" ya existe.`, { variant: 'error' });
+        return;
+      }
+      await addProduct({ ...newProduct, createdAt: new Date() });
+      enqueueSnackbar('Producto añadido correctamente.', { variant: 'success' });
+      setIsProductModalOpen(false);
+    } catch (error) {
+      console.error(error);
+      enqueueSnackbar('Error al añadir producto.', { variant: 'error' });
+    }
+  };
+
   const columns = [
     { field: 'sku', headerName: 'Código', flex: 1 },
     { field: 'category', headerName: 'Categoría', flex: 1 },
@@ -239,14 +288,25 @@ const EntryPage = () => {
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
         <TextField type="date" label="Fecha de Entrada" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} sx={{ flex: 1 }} InputLabelProps={{ shrink: true }} />
-        <FormControl sx={{ flex: 1 }}><InputLabel id="supplier-select-label">Proveedor</InputLabel><Select labelId="supplier-select-label" value={selectedSupplier} label="Proveedor" onChange={(e) => setSelectedSupplier(e.target.value)}>{suppliers.map(sup => <MenuItem key={sup.id} value={sup.id}>{sup.name}</MenuItem>)}</Select></FormControl>
-        <FormControl sx={{ flex: 1 }}><InputLabel id="receiver-select-label">Receptor</InputLabel><Select labelId="receiver-select-label" value={selectedReceiver} label="Receptor" onChange={(e) => setSelectedReceiver(e.target.value)}>{staff.map(person => <MenuItem key={person.id} value={person.id}>{person.name}</MenuItem>)}</Select></FormControl>
+
+        <Box sx={{ flex: 1, display: 'flex', gap: 1 }}>
+          <FormControl fullWidth><InputLabel id="supplier-select-label">Proveedor</InputLabel><Select labelId="supplier-select-label" value={selectedSupplier} label="Proveedor" onChange={(e) => setSelectedSupplier(e.target.value)}>{suppliers.map(sup => <MenuItem key={sup.id} value={sup.id}>{sup.name}</MenuItem>)}</Select></FormControl>
+          <IconButton color="primary" onClick={() => setIsSupplierModalOpen(true)} sx={{ border: '1px solid #ccc', borderRadius: 1 }}><AddIcon /></IconButton>
+        </Box>
+
+        <Box sx={{ flex: 1, display: 'flex', gap: 1 }}>
+          <FormControl fullWidth><InputLabel id="receiver-select-label">Receptor</InputLabel><Select labelId="receiver-select-label" value={selectedReceiver} label="Receptor" onChange={(e) => setSelectedReceiver(e.target.value)}>{staff.map(person => <MenuItem key={person.id} value={person.id}>{person.name}</MenuItem>)}</Select></FormControl>
+          <IconButton color="primary" onClick={() => setIsReceiverModalOpen(true)} sx={{ border: '1px solid #ccc', borderRadius: 1 }}><AddIcon /></IconButton>
+        </Box>
       </Box>
 
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>Añadir Productos al Lote</Typography>
         <Box>
-          <TextField fullWidth label="Buscar Producto" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Escribe código, descripción, categoría o marca..." />
+          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+            <TextField fullWidth label="Buscar Producto" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Escribe código, descripción, categoría o marca..." />
+            <IconButton color="primary" onClick={() => setIsProductModalOpen(true)} sx={{ border: '1px solid #ccc', borderRadius: 1 }}><AddIcon /></IconButton>
+          </Box>
           <Paper variant="outlined" sx={{ mt: 1, height: 180, overflow: 'auto' }}>
             <List dense>
               {filteredProducts.map(product => (
@@ -294,6 +354,10 @@ const EntryPage = () => {
         entryData={previewData}
         isSaved={isEntrySaved}
       />
+
+      <SupplierForm open={isSupplierModalOpen} onClose={() => setIsSupplierModalOpen(false)} onSave={handleSaveSupplier} />
+      <StaffForm open={isReceiverModalOpen} onClose={() => setIsReceiverModalOpen(false)} onSave={handleSaveReceiver} />
+      <ProductForm open={isProductModalOpen} onClose={() => setIsProductModalOpen(false)} onSave={handleSaveProduct} />
     </Paper>
   );
 };

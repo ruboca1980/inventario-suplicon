@@ -1,7 +1,6 @@
-import { collection, doc, runTransaction, serverTimestamp, getDoc, query, where, getDocs } from "firebase/firestore";
-import { db, auth } from './config'; // ¡IMPORTANTE: Importamos 'auth'!
+import { collection, doc, runTransaction, serverTimestamp, getDoc, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { db, auth } from './config';
 
-// (La función getNextCorrelative se queda igual)
 export const getNextCorrelative = async (type) => {
   const correlativeRef = doc(db, 'app_meta', 'counters');
   try {
@@ -50,7 +49,6 @@ export const createInventoryEntry = async (entryData) => {
   const auditData = {
     createdByUid: currentUser.uid,
     createdByEmail: currentUser.email,
-    // Si el nombre no está en Auth, usamos el email como fallback
     createdByName: currentUser.displayName || currentUser.email,
     createdAt: serverTimestamp()
   };
@@ -85,7 +83,7 @@ export const createInventoryEntry = async (entryData) => {
         supplierId: entryData.supplierId,
         staffReceiverId: entryData.staffReceiverId,
         status: "Completado",
-        ...auditData // <-- Inyectamos la auditoría
+        ...auditData
       });
 
       for (let i = 0; i < entryData.items.length; i++) {
@@ -108,7 +106,7 @@ export const createInventoryEntry = async (entryData) => {
           quantity: item.quantity,
           sku: productData.sku,
           description: productData.description,
-          ...auditData // <-- Inyectamos la auditoría en cada línea también (opcional pero útil)
+          ...auditData
         });
 
         const inventoryDataPayload = {
@@ -145,7 +143,6 @@ export const createInventoryEntry = async (entryData) => {
               productId: item.productId,
               status: "En Stock",
               entryTransactionId: batchDocRef.id,
-              // Los seriales también llevan huella de quién los ingresó
               registeredBy: auditData.createdByEmail,
               registeredAt: auditData.createdAt
             });
@@ -225,7 +222,7 @@ export const createInventoryExit = async (exitData) => {
         customerId: exitData.customerId,
         staffIssuerId: exitData.staffIssuerId,
         status: "Completado",
-        ...auditData // <-- Inyectamos auditoría
+        ...auditData
       });
 
       for (let i = 0; i < exitData.items.length; i++) {
@@ -245,7 +242,7 @@ export const createInventoryExit = async (exitData) => {
           category: inventoryDoc.data().category || '',
           brand: inventoryDoc.data().brand || '',
           serials: item.serials || [],
-          ...auditData // <-- Inyectamos auditoría
+          ...auditData
         });
 
         const newStock = inventoryDoc.data().currentStock - item.quantity;
@@ -261,12 +258,32 @@ export const createInventoryExit = async (exitData) => {
 
       transaction.set(correlativeRef, { [counterField]: newCorrelativeNumber }, { merge: true });
 
-      return batchDocRef.id; // <--- RETORNAMOS EL ID
+      return batchDocRef.id;
     });
     console.log("¡Salida de inventario creada con éxito!");
-    return result; // <--- Devolvemos el resultado de la transacción
+    return result;
   } catch (e) {
     console.error("Error en la transacción de salida: ", e);
     throw new Error("No se pudo completar la salida de inventario. " + (e.message || e));
+  }
+};
+
+/**
+ * Obtiene las transacciones recientes (Entradas y Salidas)
+ * @param {number} limitCount - Número de transacciones a obtener
+ */
+export const getRecentTransactions = async (limitCount = 10) => {
+  const batchesRef = collection(db, 'transaction_batches');
+  const q = query(batchesRef, orderBy("date", "desc"), limit(limitCount));
+
+  try {
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error("Error al obtener transacciones recientes:", error);
+    return [];
   }
 };

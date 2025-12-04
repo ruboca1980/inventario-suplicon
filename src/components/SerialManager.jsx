@@ -16,7 +16,8 @@ const SerialManager = ({ open, onClose, onSave, quantityNeeded }) => {
         const trimmedSerial = currentSerial.trim();
         if (trimmedSerial === '' || serialsList.length >= quantityNeeded) return;
 
-        if (serialsList.includes(trimmedSerial)) {
+        // Permitir duplicados SOLO si es "Sin Serial"
+        if (trimmedSerial !== 'Sin Serial' && serialsList.includes(trimmedSerial)) {
             alert(`El serial "${trimmedSerial}" ya ha sido ingresado en esta lista.`);
             setCurrentSerial('');
             return;
@@ -25,7 +26,12 @@ const SerialManager = ({ open, onClose, onSave, quantityNeeded }) => {
         setSerialsList([...serialsList, trimmedSerial]);
         setCurrentSerial('');
     };
-    
+
+    const handleAddNoSerial = () => {
+        if (serialsList.length >= quantityNeeded) return;
+        setSerialsList([...serialsList, 'Sin Serial']);
+    };
+
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -33,8 +39,8 @@ const SerialManager = ({ open, onClose, onSave, quantityNeeded }) => {
         }
     };
 
-    const handleRemoveSerial = (serialToRemove) => {
-        setSerialsList(serialsList.filter(s => s !== serialToRemove));
+    const handleRemoveSerial = (indexToRemove) => {
+        setSerialsList(serialsList.filter((_, index) => index !== indexToRemove));
     };
 
     const handleGenerateInternal = () => {
@@ -72,14 +78,17 @@ const SerialManager = ({ open, onClose, onSave, quantityNeeded }) => {
                     />
                     <Button variant="outlined" color="secondary" onClick={handleAddSerial}>Agregar</Button>
                 </Box>
-                <Button color="secondary" onClick={handleGenerateInternal} sx={{ mb: 2 }}>Generar Interno</Button>
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                    <Button color="secondary" onClick={handleGenerateInternal}>Generar Interno</Button>
+                    <Button color="warning" onClick={handleAddNoSerial}>Sin Serial</Button>
+                </Box>
 
                 <Typography>Seriales en la lista:</Typography>
                 <Paper variant="outlined" sx={{ minHeight: '150px', maxHeight: '200px', overflowY: 'auto' }}>
                     <List dense>
                         {serialsList.map((serial, index) => (
                             <ListItem key={index} secondaryAction={
-                                <IconButton edge="end" aria-label="delete" onClick={() => handleRemoveSerial(serial)}>
+                                <IconButton edge="end" aria-label="delete" onClick={() => handleRemoveSerial(index)}>
                                     <DeleteIcon />
                                 </IconButton>
                             }>
